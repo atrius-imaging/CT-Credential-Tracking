@@ -686,10 +686,12 @@ async function syncData(triggerEmails) {
   try {
     const hdrs = { "Authorization": "token " + tok(), "Content-Type": "application/json" };
     const infoRes = await fetch(DATA_API, { headers: hdrs });
+    if (!infoRes.ok) throw new Error("Could not read file from GitHub (status " + infoRes.status + "). Check token.");
     const info    = await infoRes.json();
+    if (!info.sha) throw new Error("Missing file SHA — cannot save.");
     const content = btoa(unescape(encodeURIComponent(JSON.stringify({ techs: TECHS }))));
     const pushRes = await fetch(DATA_API, { method: "PUT", headers: hdrs, body: JSON.stringify({ message: "Update credentials", content, sha: info.sha }) });
-    if (!pushRes.ok) throw new Error("Save failed");
+    if (!pushRes.ok) throw new Error("GitHub rejected the save (status " + pushRes.status + ").");
     toast("Saved!");
     if (triggerEmails) triggerEmailWorkflow();
   } catch(e) { toast("Save failed: " + e.message, true); }
@@ -697,7 +699,7 @@ async function syncData(triggerEmails) {
 function saveRecipients() { flashSaved("rec-saved"); toast("Recipients saved."); }
 function flashSaved(id) { const el=document.getElementById(id); el.classList.add("show"); setTimeout(function(){el.classList.remove("show");},2500); }
 let toastTimer;
-function toast(msg, err) { const el=document.getElementById("toast"); el.textContent=msg; el.className="show"+(err?" err":""); clearTimeout(toastTimer); toastTimer=setTimeout(function(){el.className="";},3500); }
+function toast(msg, err) { const el=document.getElementById("toast"); el.textContent=msg; el.className="show"+(err?" err":""); clearTimeout(toastTimer); toastTimer=setTimeout(function(){el.className="";},err?6000:3500); }
 </script>
 </body>
 </html>
